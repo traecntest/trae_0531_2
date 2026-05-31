@@ -2,6 +2,7 @@
 @using Microsoft.OpenApi.Models
 @inject OpenApiParserService ParserService
 @inject NavigationManager NavManager
+@implements IDisposable
 
 <MudStack Spacing="4">
     <MudPaper Elevation="2" Class="pa-6">
@@ -25,14 +26,17 @@
             <MudItem xs="12" md="4">
                 <MudPaper Elevation="2" Class="pa-4" Style="height: calc(100vh - 200px); overflow-y: auto;">
                     <MudText Typo="Typo.h6" Class="mb-3">API 导航</MudText>
-                    <OpenApiTreeView TagGroups="_tagGroups" />
+                    <OpenApiTreeView TagGroups="_tagGroups" OnOperationSelected="OnOperationSelected" />
                 </MudPaper>
             </MudItem>
             <MudItem xs="12" md="8">
                 @if (_selectedOperation == null)
                 {
                     <MudPaper Elevation="2" Class="pa-6">
-                        <MudText Typo="Typo.h6" Color="Color.Secondary">请从左侧选择一个 API 接口查看详情</MudText>
+                        <MudStack Spacing="3" AlignItems="AlignItems.Center" Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" />
+                            <MudText Typo="Typo.h6" Color="Color.Secondary">请从左侧选择一个 API 接口查看详情</MudText>
+                        </MudStack>
                     </MudPaper>
                 }
                 else
@@ -40,13 +44,13 @@
                     <MudPaper Elevation="2" Class="pa-6">
                         <MudStack Spacing="3">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <span class="chip chip-@_selectedMethod.ToString().ToLower()">@_selectedMethod.ToString().ToUpper()</span>
+                                <span class="op-chip op-chip-@_selectedMethod.ToString().ToLower()">@_selectedMethod.ToString().ToUpper()</span>
                                 <MudText Typo="Typo.h6">@_selectedPath</MudText>
                             </MudStack>
 
                             @if (!string.IsNullOrEmpty(_selectedOperation.Summary))
                             {
-                                <MudText Typo="Typo.h6">@_selectedOperation.Summary</MudText>
+                                <MudText Typo="Typo.subtitle1">@_selectedOperation.Summary</MudText>
                             }
 
                             @if (!string.IsNullOrEmpty(_selectedOperation.Description))
@@ -73,16 +77,16 @@
                                             {
                                                 <tr>
                                                     <td><code>@param.Name</code></td>
-                                                    <td><span class="chip chip-info">@param.In</span></td>
-                                                    <td><span class="chip chip-type">@GetSchemaType(param.Schema)</span></td>
+                                                    <td><span class="tbl-chip tbl-chip-info">@param.In</span></td>
+                                                    <td><span class="tbl-chip tbl-chip-type">@GetSchemaType(param.Schema)</span></td>
                                                     <td>
                                                         @if (param.Required)
                                                         {
-                                                            <span class="chip chip-error">必填</span>
+                                                            <span class="tbl-chip tbl-chip-error">必填</span>
                                                         }
                                                         else
                                                         {
-                                                            <span class="chip chip-default">可选</span>
+                                                            <span class="tbl-chip tbl-chip-default">可选</span>
                                                         }
                                                     </td>
                                                     <td>@param.Description</td>
@@ -100,8 +104,8 @@
                                     @foreach (var content in _selectedOperation.RequestBody.Content)
                                     {
                                         <div class="mb-2">
-                                            <span class="chip chip-info">@content.Key</span>
-                                            <span class="chip chip-type">@GetSchemaType(content.Value.Schema)</span>
+                                            <span class="tbl-chip tbl-chip-info">@content.Key</span>
+                                            <span class="tbl-chip tbl-chip-type">@GetSchemaType(content.Value.Schema)</span>
                                         </div>
                                     }
                                 </div>
@@ -124,13 +128,13 @@
                                             {
                                                 <tr>
                                                     <td>
-                                                        <span class="chip @(response.Key.StartsWith("2") ? "chip-success" : "chip-info")">@response.Key</span>
+                                                        <span class="tbl-chip @(response.Key.StartsWith("2") ? "tbl-chip-success" : "tbl-chip-info")">@response.Key</span>
                                                     </td>
                                                     <td>@response.Value.Description</td>
                                                     <td>
                                                         @if (response.Value.Content != null && response.Value.Content.Any())
                                                         {
-                                                            <span class="chip chip-type">@GetSchemaType(response.Value.Content.First().Value.Schema)</span>
+                                                            <span class="tbl-chip tbl-chip-type">@GetSchemaType(response.Value.Content.First().Value.Schema)</span>
                                                         }
                                                     </td>
                                                 </tr>
@@ -168,52 +172,45 @@
         font-weight: 600;
         background-color: var(--mud-palette-surface);
     }
-    .chip {
+    .op-chip {
         display: inline-block;
         padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        min-width: 64px;
+        text-align: center;
+        color: white;
+    }
+    .op-chip-get { background-color: #10b981; }
+    .op-chip-post { background-color: #3b82f6; }
+    .op-chip-put { background-color: #f59e0b; }
+    .op-chip-delete { background-color: #ef4444; }
+    .op-chip-patch { background-color: #8b5cf6; }
+    .tbl-chip {
+        display: inline-block;
+        padding: 2px 8px;
         border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 600;
-        min-width: 60px;
-        text-align: center;
     }
-    .chip-get {
-        background-color: #10b981;
-        color: white;
-    }
-    .chip-post {
-        background-color: #3b82f6;
-        color: white;
-    }
-    .chip-put {
-        background-color: #f59e0b;
-        color: white;
-    }
-    .chip-delete {
-        background-color: #ef4444;
-        color: white;
-    }
-    .chip-patch {
-        background-color: #8b5cf6;
-        color: white;
-    }
-    .chip-info {
+    .tbl-chip-info {
         background-color: rgba(14, 165, 233, 0.1);
         color: #0ea5e9;
     }
-    .chip-type {
+    .tbl-chip-type {
         background-color: rgba(139, 92, 246, 0.1);
         color: #8b5cf6;
     }
-    .chip-error {
+    .tbl-chip-error {
         background-color: rgba(239, 68, 68, 0.1);
         color: #ef4444;
     }
-    .chip-default {
-        background-color: var(--mud-palette-surface);
+    .tbl-chip-default {
+        background-color: var(--mud-palette-action-disabled-background);
         color: var(--mud-palette-text-secondary);
     }
-    .chip-success {
+    .tbl-chip-success {
         background-color: rgba(16, 185, 129, 0.1);
         color: #10b981;
     }
@@ -237,16 +234,30 @@
         if (AppState.CurrentDocument != null)
         {
             _tagGroups = ParserService.GroupByTags(AppState.CurrentDocument);
+            TrySelectFromQueryString();
         }
+
+        NavManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        TrySelectFromQueryString();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void TrySelectFromQueryString()
+    {
+        if (AppState.CurrentDocument == null) return;
 
         var uri = new Uri(NavManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var path = query["path"];
         var method = query["method"];
 
-        if (!string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(method) && AppState.CurrentDocument != null)
+        if (!string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(method))
         {
-            if (Enum.TryParse<OperationType>(method, out var opType))
+            if (Enum.TryParse<OperationType>(method, true, out var opType))
             {
                 var pathItem = AppState.CurrentDocument.Paths.FirstOrDefault(p => p.Key == path);
                 if (pathItem.Value != null)
@@ -261,6 +272,13 @@
                 }
             }
         }
+    }
+
+    private void OnOperationSelected((string Path, OperationType Method, OpenApiOperation Operation) selected)
+    {
+        _selectedPath = selected.Path;
+        _selectedMethod = selected.Method;
+        _selectedOperation = selected.Operation;
     }
 
     private static string GetSchemaType(OpenApiSchema? schema)
@@ -284,5 +302,10 @@
     {
         var url = $"/tryit?url={Uri.EscapeDataString(_selectedPath)}&method={_selectedMethod}";
         NavManager.NavigateTo(url);
+    }
+
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= OnLocationChanged;
     }
 }

@@ -1,5 +1,4 @@
 @using Microsoft.OpenApi.Models
-@inject NavigationManager NavManager
 
 <MudPaper Elevation="0">
     @if (TagGroups == null || !TagGroups.Any())
@@ -21,10 +20,14 @@
                 <ChildContent>
                     @foreach (var (path, method, operation) in tagGroup.Operations)
                     {
-                        <div @onclick="() => NavigateToOperation(path, method, operation)" class="list-item">
+                        <div @onclick="() => SelectOperation(path, method, operation)" class="list-item">
                             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                                 <span class="chip chip-@method.ToString().ToLower()">@method.ToString().ToUpper()</span>
                                 <MudText Typo="Typo.body2">@path</MudText>
+                                @if (!string.IsNullOrEmpty(operation.Summary))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-2">- @operation.Summary</MudText>
+                                }
                             </MudStack>
                         </div>
                     }
@@ -39,6 +42,7 @@
         padding: 8px 16px;
         cursor: pointer;
         transition: background 0.15s;
+        border-radius: 4px;
     }
     .list-item:hover {
         background-color: var(--mud-palette-surface);
@@ -53,8 +57,8 @@
         text-align: center;
     }
     .chip-default {
-        background-color: var(--mud-palette-default);
-        color: white;
+        background-color: var(--mud-palette-action-disabled-background);
+        color: var(--mud-palette-text-secondary);
     }
     .chip-get {
         background-color: #10b981;
@@ -82,8 +86,11 @@
     [Parameter]
     public List<(OpenApiTag Tag, List<(string Path, OperationType Method, OpenApiOperation Operation)> Operations)>? TagGroups { get; set; }
 
-    private void NavigateToOperation(string path, OperationType method, OpenApiOperation operation)
+    [Parameter]
+    public EventCallback<(string Path, OperationType Method, OpenApiOperation Operation)> OnOperationSelected { get; set; }
+
+    private async Task SelectOperation(string path, OperationType method, OpenApiOperation operation)
     {
-        NavManager.NavigateTo($"/explorer?path={Uri.EscapeDataString(path)}&method={method}");
+        await OnOperationSelected.InvokeAsync((path, method, operation));
     }
 }
