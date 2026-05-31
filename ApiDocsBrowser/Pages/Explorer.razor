@@ -1,0 +1,288 @@
+@page "/explorer"
+@using Microsoft.OpenApi.Models
+@inject OpenApiParserService ParserService
+@inject NavigationManager NavManager
+
+<MudStack Spacing="4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h4">API 文档浏览器</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                浏览和测试 API 接口，支持按标签分组查看
+            </MudText>
+        </MudStack>
+    </MudPaper>
+
+    @if (AppState.CurrentDocument == null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            尚未加载 API 文档，请先 <MudLink Href="/">返回首页</MudLink> 加载文档。
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="2" Class="pa-4" Style="height: calc(100vh - 200px); overflow-y: auto;">
+                    <MudText Typo="Typo.h6" Class="mb-3">API 导航</MudText>
+                    <OpenApiTreeView TagGroups="_tagGroups" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="8">
+                @if (_selectedOperation == null)
+                {
+                    <MudPaper Elevation="2" Class="pa-6">
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">请从左侧选择一个 API 接口查看详情</MudText>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudPaper Elevation="2" Class="pa-6">
+                        <MudStack Spacing="3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <span class="chip chip-@_selectedMethod.ToString().ToLower()">@_selectedMethod.ToString().ToUpper()</span>
+                                <MudText Typo="Typo.h6">@_selectedPath</MudText>
+                            </MudStack>
+
+                            @if (!string.IsNullOrEmpty(_selectedOperation.Summary))
+                            {
+                                <MudText Typo="Typo.h6">@_selectedOperation.Summary</MudText>
+                            }
+
+                            @if (!string.IsNullOrEmpty(_selectedOperation.Description))
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@_selectedOperation.Description</MudText>
+                            }
+
+                            @if (_selectedOperation.Parameters != null && _selectedOperation.Parameters.Any())
+                            {
+                                <div>
+                                    <MudText Typo="Typo.subtitle2" Class="mb-2"><b>参数</b></MudText>
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>名称</th>
+                                                <th>位置</th>
+                                                <th>类型</th>
+                                                <th>必填</th>
+                                                <th>描述</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var param in _selectedOperation.Parameters)
+                                            {
+                                                <tr>
+                                                    <td><code>@param.Name</code></td>
+                                                    <td><span class="chip chip-info">@param.In</span></td>
+                                                    <td><span class="chip chip-type">@GetSchemaType(param.Schema)</span></td>
+                                                    <td>
+                                                        @if (param.Required)
+                                                        {
+                                                            <span class="chip chip-error">必填</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="chip chip-default">可选</span>
+                                                        }
+                                                    </td>
+                                                    <td>@param.Description</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            @if (_selectedOperation.RequestBody != null)
+                            {
+                                <div>
+                                    <MudText Typo="Typo.subtitle2" Class="mb-2"><b>请求体</b></MudText>
+                                    @foreach (var content in _selectedOperation.RequestBody.Content)
+                                    {
+                                        <div class="mb-2">
+                                            <span class="chip chip-info">@content.Key</span>
+                                            <span class="chip chip-type">@GetSchemaType(content.Value.Schema)</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (_selectedOperation.Responses != null && _selectedOperation.Responses.Any())
+                            {
+                                <div>
+                                    <MudText Typo="Typo.subtitle2" Class="mb-2"><b>响应</b></MudText>
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态码</th>
+                                                <th>描述</th>
+                                                <th>类型</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var response in _selectedOperation.Responses)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <span class="chip @(response.Key.StartsWith("2") ? "chip-success" : "chip-info")">@response.Key</span>
+                                                    </td>
+                                                    <td>@response.Value.Description</td>
+                                                    <td>
+                                                        @if (response.Value.Content != null && response.Value.Content.Any())
+                                                        {
+                                                            <span class="chip chip-type">@GetSchemaType(response.Value.Content.First().Value.Schema)</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlayArrow" 
+                                       OnClick="NavigateToTryIt">
+                                在 Try It 中测试
+                            </MudButton>
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudItem>
+        </MudGrid>
+    }
+</MudStack>
+
+<style>
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+    }
+    .data-table th,
+    .data-table td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+    .data-table th {
+        font-weight: 600;
+        background-color: var(--mud-palette-surface);
+    }
+    .chip {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: center;
+    }
+    .chip-get {
+        background-color: #10b981;
+        color: white;
+    }
+    .chip-post {
+        background-color: #3b82f6;
+        color: white;
+    }
+    .chip-put {
+        background-color: #f59e0b;
+        color: white;
+    }
+    .chip-delete {
+        background-color: #ef4444;
+        color: white;
+    }
+    .chip-patch {
+        background-color: #8b5cf6;
+        color: white;
+    }
+    .chip-info {
+        background-color: rgba(14, 165, 233, 0.1);
+        color: #0ea5e9;
+    }
+    .chip-type {
+        background-color: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+    }
+    .chip-error {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    .chip-default {
+        background-color: var(--mud-palette-surface);
+        color: var(--mud-palette-text-secondary);
+    }
+    .chip-success {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    code {
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        background-color: var(--mud-palette-surface);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+</style>
+
+@code {
+    private List<(OpenApiTag Tag, List<(string Path, OperationType Method, OpenApiOperation Operation)> Operations)>? _tagGroups;
+    private OpenApiOperation? _selectedOperation;
+    private string _selectedPath = "";
+    private OperationType _selectedMethod;
+
+    protected override void OnInitialized()
+    {
+        if (AppState.CurrentDocument != null)
+        {
+            _tagGroups = ParserService.GroupByTags(AppState.CurrentDocument);
+        }
+
+        var uri = new Uri(NavManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var path = query["path"];
+        var method = query["method"];
+
+        if (!string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(method) && AppState.CurrentDocument != null)
+        {
+            if (Enum.TryParse<OperationType>(method, out var opType))
+            {
+                var pathItem = AppState.CurrentDocument.Paths.FirstOrDefault(p => p.Key == path);
+                if (pathItem.Value != null)
+                {
+                    var operation = pathItem.Value.Operations.FirstOrDefault(o => o.Key == opType);
+                    if (operation.Value != null)
+                    {
+                        _selectedOperation = operation.Value;
+                        _selectedPath = path;
+                        _selectedMethod = opType;
+                    }
+                }
+            }
+        }
+    }
+
+    private static string GetSchemaType(OpenApiSchema? schema)
+    {
+        if (schema == null) return "object";
+
+        if (schema.Reference != null)
+        {
+            return schema.Reference.Id;
+        }
+
+        if (schema.Type == "array" && schema.Items != null)
+        {
+            return $"Array[{GetSchemaType(schema.Items)}]";
+        }
+
+        return schema.Type ?? "object";
+    }
+
+    private void NavigateToTryIt()
+    {
+        var url = $"/tryit?url={Uri.EscapeDataString(_selectedPath)}&method={_selectedMethod}";
+        NavManager.NavigateTo(url);
+    }
+}

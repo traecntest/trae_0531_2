@@ -1,0 +1,312 @@
+@inject HttpClient HttpClient
+
+<MudPaper Elevation="2" Class="pa-6">
+    <MudStack Spacing="4">
+        <MudText Typo="Typo.h5">API 测试客户端</MudText>
+
+        <MudStack Spacing="3">
+            <MudStack Row="true" Spacing="2">
+                <MudSelect T="string" @bind-Value="SelectedMethod" Label="请求方法" Variant="Variant.Outlined" Style="width: 140px;">
+                    <MudSelectItem T="string" Value="@("GET")">GET</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("POST")">POST</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("PUT")">PUT</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("DELETE")">DELETE</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("PATCH")">PATCH</MudSelectItem>
+                </MudSelect>
+                <MudTextField T="string" @bind-Value="RequestUrl" Label="请求 URL" Variant="Variant.Outlined" Style="flex: 1;" Placeholder="https://api.example.com/endpoint" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendRequest" Disabled="IsLoading" Style="min-width: 100px;">
+                    @if (IsLoading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    }
+                    else
+                    {
+                        <span>发送请求</span>
+                    }
+                </MudButton>
+            </MudStack>
+
+            <MudExpansionPanel>
+                <TitleContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Http" Color="Color.Info" />
+                        <MudText>请求头</MudText>
+                        <span class="chip chip-info">@Headers.Count</span>
+                    </MudStack>
+                </TitleContent>
+                <ChildContent>
+                    <MudStack Spacing="2">
+                        @for (int i = 0; i < Headers.Count; i++)
+                        {
+                            var index = i;
+                            <MudStack Row="true" Spacing="2">
+                                <MudTextField T="string" Value="Headers[index].Key" ValueChanged="(value) => UpdateHeaderKey(index, value)" Placeholder="Header Key" Variant="Variant.Outlined" Style="flex: 1;" />
+                                <MudTextField T="string" Value="Headers[index].Value" ValueChanged="(value) => UpdateHeaderValue(index, value)" Placeholder="Header Value" Variant="Variant.Outlined" Style="flex: 1;" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => RemoveHeader(index)" />
+                            </MudStack>
+                        }
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddHeader">
+                            添加请求头
+                        </MudButton>
+                    </MudStack>
+                </ChildContent>
+            </MudExpansionPanel>
+
+            @if (SelectedMethod != "GET")
+            {
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.subtitle2"><b>请求体 (JSON)</b></MudText>
+                    <textarea @bind="RequestBody" class="json-editor" placeholder="{&quot;key&quot;: &quot;value&quot;}"></textarea>
+                </MudStack>
+            }
+        </MudStack>
+
+        @if (Response != null)
+        {
+            <MudDivider Class="my-4" />
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.h6">响应</MudText>
+                    <span class="chip @(Response.IsSuccessStatusCode ? "chip-success" : "chip-error")">
+                        @((int)Response.StatusCode) @Response.StatusCode
+                    </span>
+                    <span class="chip chip-info">@ResponseTimeMs ms</span>
+                </MudStack>
+
+                <MudTabs>
+                    <MudTabPanel Text="响应体">
+                        <textarea class="json-editor" readonly>@ResponseBody</textarea>
+                    </MudTabPanel>
+                    <MudTabPanel Text="响应头">
+                        <div class="headers-list">
+                            @foreach (var header in Response.Headers)
+                            {
+                                <div class="header-item">
+                                    <span class="header-key">@header.Key:</span>
+                                    <span class="header-value">@string.Join(", ", header.Value)</span>
+                                </div>
+                            }
+                        </div>
+                    </MudTabPanel>
+                    <MudTabPanel Text="代码片段">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle2">cURL</MudText>
+                            <textarea class="code-snippet" readonly>@GenerateCurlCommand()</textarea>
+                            <MudText Typo="Typo.subtitle2">JavaScript (fetch)</MudText>
+                            <textarea class="code-snippet" readonly>@GenerateJavaScriptCode()</textarea>
+                        </MudStack>
+                    </MudTabPanel>
+                </MudTabs>
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+<style>
+    .json-editor {
+        width: 100%;
+        min-height: 200px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        font-size: 0.875rem;
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 4px;
+        background-color: var(--mud-palette-surface);
+        color: var(--mud-palette-text-primary);
+        resize: vertical;
+    }
+    .json-editor:focus {
+        outline: none;
+        border-color: var(--mud-palette-primary);
+    }
+    .code-snippet {
+        width: 100%;
+        min-height: 120px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        font-size: 0.875rem;
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 4px;
+        background-color: var(--mud-palette-surface);
+        color: var(--mud-palette-text-primary);
+        resize: vertical;
+    }
+    .headers-list {
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        font-size: 0.875rem;
+    }
+    .header-item {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+    .header-key {
+        font-weight: 600;
+        color: var(--mud-palette-primary);
+    }
+    .header-value {
+        margin-left: 8px;
+        color: var(--mud-palette-text-secondary);
+    }
+    .chip {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .chip-info {
+        background-color: rgba(14, 165, 233, 0.1);
+        color: #0ea5e9;
+    }
+    .chip-success {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    .chip-error {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string? InitialUrl { get; set; }
+
+    [Parameter]
+    public string? InitialMethod { get; set; }
+
+    private string SelectedMethod { get; set; } = "GET";
+    private string RequestUrl { get; set; } = "";
+    private string RequestBody { get; set; } = "";
+    private List<HeaderItem> Headers { get; set; } = new();
+    private bool IsLoading { get; set; }
+    private HttpResponseMessage? Response { get; set; }
+    private string ResponseBody { get; set; } = "";
+    private long ResponseTimeMs { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(InitialUrl))
+        {
+            RequestUrl = InitialUrl;
+        }
+        if (!string.IsNullOrEmpty(InitialMethod))
+        {
+            SelectedMethod = InitialMethod.ToUpper();
+        }
+        Headers.Add(new HeaderItem { Key = "Content-Type", Value = "application/json" });
+    }
+
+    private void AddHeader()
+    {
+        Headers.Add(new HeaderItem());
+    }
+
+    private void RemoveHeader(int index)
+    {
+        Headers.RemoveAt(index);
+    }
+
+    private void UpdateHeaderKey(int index, string value)
+    {
+        Headers[index] = new HeaderItem { Key = value, Value = Headers[index].Value };
+    }
+
+    private void UpdateHeaderValue(int index, string value)
+    {
+        Headers[index] = new HeaderItem { Key = Headers[index].Key, Value = value };
+    }
+
+    private async Task SendRequest()
+    {
+        if (string.IsNullOrWhiteSpace(RequestUrl)) return;
+
+        IsLoading = true;
+        Response = null;
+        ResponseBody = "";
+
+        try
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            var request = new HttpRequestMessage(new HttpMethod(SelectedMethod), RequestUrl);
+
+            foreach (var header in Headers.Where(h => !string.IsNullOrWhiteSpace(h.Key)))
+            {
+                request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            if (SelectedMethod != "GET" && !string.IsNullOrWhiteSpace(RequestBody))
+            {
+                request.Content = new StringContent(RequestBody, System.Text.Encoding.UTF8, "application/json");
+            }
+
+            Response = await HttpClient.SendAsync(request);
+            ResponseBody = await Response.Content.ReadAsStringAsync();
+            ResponseTimeMs = stopwatch.ElapsedMilliseconds;
+        }
+        catch (Exception ex)
+        {
+            ResponseBody = $"错误: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GenerateCurlCommand()
+    {
+        var curl = $"curl -X {SelectedMethod} \"{RequestUrl}\"";
+
+        foreach (var header in Headers.Where(h => !string.IsNullOrWhiteSpace(h.Key)))
+        {
+            curl += $" \\\n  -H \"{header.Key}: {header.Value}\"";
+        }
+
+        if (SelectedMethod != "GET" && !string.IsNullOrWhiteSpace(RequestBody))
+        {
+            curl += $" \\\n  -d '{RequestBody}'";
+        }
+
+        return curl;
+    }
+
+    private string GenerateJavaScriptCode()
+    {
+        var headersList = Headers.Where(h => !string.IsNullOrWhiteSpace(h.Key))
+            .Select(h => $"    '{h.Key}': '{h.Value}'");
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"fetch('{RequestUrl}', {{");
+        sb.AppendLine($"  method: '{SelectedMethod}',");
+        sb.AppendLine("  headers: {");
+        sb.AppendLine(string.Join(",\n", headersList));
+        sb.Append("  }");
+
+        if (SelectedMethod != "GET" && !string.IsNullOrWhiteSpace(RequestBody))
+        {
+            var safeBody = RequestBody.Replace("\"", "\\\"");
+            sb.AppendLine(",");
+            sb.AppendLine($"  body: JSON.stringify({RequestBody})");
+            sb.Append("})");
+        }
+        else
+        {
+            sb.Append("})");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine(".then(response => response.json())");
+        sb.AppendLine(".then(data => console.log(data))");
+        sb.Append(".catch(error => console.error('Error:', error));");
+
+        return sb.ToString();
+    }
+
+    public class HeaderItem
+    {
+        public string Key { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+}

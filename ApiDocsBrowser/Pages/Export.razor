@@ -1,0 +1,204 @@
+@page "/export"
+@inject HtmlExportService HtmlExportService
+@inject IJSRuntime JSRuntime
+
+<MudStack Spacing="4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h4">导出 API 文档</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                将 API 文档导出为静态 HTML 或其他格式
+            </MudText>
+        </MudStack>
+    </MudPaper>
+
+    @if (AppState.CurrentDocument == null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            尚未加载 API 文档，请先 <MudLink Href="/">返回首页</MudLink> 加载文档。
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="1" Class="pa-5">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
+                            静态 HTML 导出
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            导出为独立的 HTML 文件，可以直接在浏览器中打开查看
+                        </MudText>
+                        
+                        <MudTextField T="string" 
+                                      Label="文档标题" 
+                                      @bind-Value="_exportTitle"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true" />
+                        
+                        <MudSwitch T="bool" Label="暗色主题" @bind-Value="_darkModeExport" />
+                        
+                        <MudButton Variant="Variant.Filled" 
+                                  Color="Color.Primary" 
+                                  OnClick="ExportHtml"
+                                  Disabled="_isExporting"
+                                  FullWidth="true">
+                            @if (_isExporting)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" />
+                                <span>导出 HTML</span>
+                            }
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="1" Class="pa-5">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.DataObject" Class="mr-2" />
+                            Postman Collection 导出
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            导出为 Postman Collection v2.1 格式
+                        </MudText>
+                        
+                        <MudButton Variant="Variant.Outlined" 
+                                  Color="Color.Secondary" 
+                                  OnClick="@ExportPostman"
+                                  Disabled="_isExporting"
+                                  FullWidth="true">
+                            <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> 导出 Postman Collection
+                        </MudButton>
+                        
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">
+                            导出的 JSON 文件可以直接导入到 Postman 中使用
+                        </MudAlert>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudPaper Elevation="1" Class="pa-5">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                    当前文档信息
+                </MudText>
+                <MudGrid Spacing="3">
+                    <MudItem xs="6" sm="4">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">文档标题</MudText>
+                        <MudText Typo="Typo.subtitle2">@AppState.CurrentDocument.Info.Title</MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">版本</MudText>
+                        <MudText Typo="Typo.subtitle2">@AppState.CurrentDocument.Info.Version</MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">API 接口数</MudText>
+                        <MudText Typo="Typo.subtitle2">@AppState.CurrentDocument.Paths.Count</MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">数据模型数</MudText>
+                        <MudText Typo="Typo.subtitle2">@(AppState.CurrentDocument.Components?.Schemas?.Count ?? 0)</MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">服务器地址</MudText>
+                        <MudText Typo="Typo.subtitle2">@(AppState.CurrentDocument.Servers.FirstOrDefault()?.Url ?? "无")</MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
+        </MudPaper>
+    }
+
+    @if (_errorMessage != null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Closable="true" Closed="@(() => _errorMessage = null)">
+            @_errorMessage
+        </MudAlert>
+    }
+</MudStack>
+
+@code {
+    private string _exportTitle = "API 文档";
+    private bool _darkModeExport;
+    private bool _isExporting;
+    private string? _errorMessage;
+
+    protected override void OnInitialized()
+    {
+        if (AppState.CurrentDocument != null)
+        {
+            _exportTitle = AppState.CurrentDocument.Info.Title;
+        }
+    }
+
+    private async Task ExportHtml()
+    {
+        _isExporting = true;
+        _errorMessage = null;
+        
+        try
+        {
+            var html = await HtmlExportService.ExportToHtmlAsync(AppState.CurrentDocument!, _exportTitle, _darkModeExport);
+            var fileName = $"{_exportTitle.Replace(" ", "_")}.html";
+            
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/html", html);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"导出失败: {ex.Message}";
+        }
+        finally
+        {
+            _isExporting = false;
+        }
+    }
+
+    private async Task ExportPostman()
+    {
+        _isExporting = true;
+        _errorMessage = null;
+        
+        try
+        {
+            var collection = new
+            {
+                info = new
+                {
+                    name = AppState.CurrentDocument!.Info.Title,
+                    schema = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+                },
+                item = AppState.CurrentDocument.Paths.Select(p => new
+                {
+                    name = p.Key,
+                    request = new
+                    {
+                        method = p.Value.Operations.FirstOrDefault().Key.ToString().ToUpper(),
+                        url = AppState.CurrentDocument.Servers.FirstOrDefault()?.Url + p.Key
+                    }
+                }).ToList()
+            };
+            
+            var json = System.Text.Json.JsonSerializer.Serialize(collection, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var fileName = $"{_exportTitle.Replace(" ", "_")}_postman.json";
+            
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/json", json);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"导出失败: {ex.Message}";
+        }
+        finally
+        {
+            _isExporting = false;
+        }
+    }
+}

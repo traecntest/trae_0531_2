@@ -1,0 +1,232 @@
+﻿@page "/"
+@inject OpenApiParserService ParserService
+@inject HttpClient HttpClient
+@inject NavigationManager NavManager
+
+<MudStack Spacing="4">
+    <MudPaper Elevation="3" Class="pa-8 text-center">
+        <MudStack Spacing="3" AlignItems="AlignItems.Center">
+            <MudIcon Icon="@Icons.Material.Filled.Api" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.h3">API 文档浏览器</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Secondary">
+                高颜值 OpenAPI 3.x 文档浏览器，支持 Try It 在线测试、多主题切换、静态 HTML 导出
+            </MudText>
+        </MudStack>
+    </MudPaper>
+
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="2" Class="pa-6">
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" Color="Color.Primary" />
+                        <MudText Typo="Typo.h5">上传 OpenAPI 文件</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        支持 JSON 和 YAML 格式的 OpenAPI 3.x 规范文件
+                    </MudText>
+                    <InputFile OnChange="OnFileUpload" class="file-input" accept=".json,.yaml,.yml" />
+                    @if (_fileUploadError != null)
+                    {
+                        <MudAlert Severity="Severity.Error">@_fileUploadError</MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="2" Class="pa-6">
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" />
+                        <MudText Typo="Typo.h5">从 URL 加载</MudText>
+                    </MudStack>
+                    <MudTextField T="string" @bind-Value="_urlInput" Label="OpenAPI 文档 URL" 
+                                  Variant="Variant.Outlined" Placeholder="https://api.example.com/openapi.json" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadFromUrl" Disabled="string.IsNullOrWhiteSpace(_urlInput)">
+                        加载文档
+                    </MudButton>
+                    @if (_urlLoadError != null)
+                    {
+                        <MudAlert Severity="Severity.Error">@_urlLoadError</MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Elevation="2" Class="pa-6">
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" />
+                        <MudText Typo="Typo.h5">粘贴 OpenAPI 内容</MudText>
+                    </MudStack>
+                    <textarea @bind="_pasteContent" class="paste-editor" placeholder="在此粘贴 JSON 或 YAML 格式的 OpenAPI 文档..."></textarea>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadFromPaste" Disabled="string.IsNullOrWhiteSpace(_pasteContent)">
+                        解析内容
+                    </MudButton>
+                    @if (_pasteError != null)
+                    {
+                        <MudAlert Severity="Severity.Error">@_pasteError</MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Elevation="2" Class="pa-6">
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesomeMotion" Color="Color.Primary" />
+                        <MudText Typo="Typo.h5">示例文档</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        加载一个示例 OpenAPI 文档来体验功能
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadSample">
+                        加载示例文档
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-4 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">文档渲染</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    OpenAPI 3.x JSON/YAML 解析、树形导航、Schema 浏览器
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-4 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Color="Color.Success" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">Try It 测试</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    在线 API 测试、自动填充默认值、响应实时展示
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-4 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Palette" Color="Color.Secondary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">多主题</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    亮色/暗色主题、品牌色自定义、多种预设
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-4 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Download" Color="Color.Info" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">导出功能</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    静态 HTML 导出、代码片段生成
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudStack>
+
+<style>
+    .file-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px dashed var(--mud-palette-divider);
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    .file-input:hover {
+        border-color: var(--mud-palette-primary);
+    }
+    .paste-editor {
+        width: 100%;
+        min-height: 200px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        font-size: 0.875rem;
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 4px;
+        background-color: var(--mud-palette-surface);
+        color: var(--mud-palette-text-primary);
+        resize: vertical;
+    }
+    .paste-editor:focus {
+        outline: none;
+        border-color: var(--mud-palette-primary);
+    }
+</style>
+
+@code {
+    private string _urlInput = "";
+    private string _pasteContent = "";
+    private string? _fileUploadError;
+    private string? _urlLoadError;
+    private string? _pasteError;
+
+    private async Task OnFileUpload(InputFileChangeEventArgs e)
+    {
+        _fileUploadError = null;
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream());
+            var content = await reader.ReadToEndAsync();
+            var document = await ParserService.ParseAsync(content);
+            AppState.CurrentDocument = document;
+            NavManager.NavigateTo("/explorer");
+        }
+        catch (Exception ex)
+        {
+            _fileUploadError = $"解析失败: {ex.Message}";
+        }
+    }
+
+    private async Task LoadFromUrl()
+    {
+        _urlLoadError = null;
+        try
+        {
+            var content = await HttpClient.GetStringAsync(_urlInput);
+            var document = await ParserService.ParseAsync(content);
+            AppState.CurrentDocument = document;
+            NavManager.NavigateTo("/explorer");
+        }
+        catch (Exception ex)
+        {
+            _urlLoadError = $"加载失败: {ex.Message}";
+        }
+    }
+
+    private async Task LoadFromPaste()
+    {
+        _pasteError = null;
+        try
+        {
+            var document = await ParserService.ParseAsync(_pasteContent);
+            AppState.CurrentDocument = document;
+            NavManager.NavigateTo("/explorer");
+        }
+        catch (Exception ex)
+        {
+            _pasteError = $"解析失败: {ex.Message}";
+        }
+    }
+
+    private async Task LoadSample()
+    {
+        try
+        {
+            var content = await HttpClient.GetStringAsync("sample-openapi.json");
+            var document = await ParserService.ParseAsync(content);
+            AppState.CurrentDocument = document;
+            NavManager.NavigateTo("/explorer");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"加载示例失败: {ex.Message}");
+        }
+    }
+}

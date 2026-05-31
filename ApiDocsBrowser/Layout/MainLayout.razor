@@ -1,0 +1,74 @@
+﻿@inherits LayoutComponentBase
+@inject ThemeService ThemeService
+@implements IDisposable
+
+<MudThemeProvider Theme="ThemeService.CurrentTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" OnClick="@(() => DrawerToggle?.Invoke())" Edge="Edge.Start" />
+        <MudText Typo="Typo.h6" Class="ml-2">API 文档浏览器</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.DarkMode" 
+                       OnClick="@(() => ThemeService.ToggleDarkMode(!ThemeService.IsDarkMode))"
+                       Title="切换主题" />
+        <MudIconButton Icon="@Icons.Material.Filled.Palette" 
+                       OnClick="@OpenThemeSettings"
+                       Title="主题设置" />
+        <MudIconButton Icon="@Icons.Material.Filled.Help" 
+                       OnClick="@OpenAbout"
+                       Title="关于" />
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="2">
+        <MudDrawerHeader>
+            <MudText Typo="Typo.h6">导航</MudText>
+        </MudDrawerHeader>
+        <MudNavMenu>
+            <MudNavLink Href="" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">首页</MudNavLink>
+            <MudNavLink Href="explorer" Icon="@Icons.Material.Filled.Description">API 文档</MudNavLink>
+            <MudNavLink Href="tryit" Icon="@Icons.Material.Filled.PlayArrow">Try It</MudNavLink>
+            <MudNavLink Href="schemas" Icon="@Icons.Material.Filled.DataObject">数据模型</MudNavLink>
+            <MudNavLink Href="export" Icon="@Icons.Material.Filled.Download">导出</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-8">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    public event Action? DrawerToggle;
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+        DrawerToggle += ToggleDrawer;
+    }
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void OpenThemeSettings()
+    {
+    }
+
+    private void OpenAbout()
+    {
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+        DrawerToggle -= ToggleDrawer;
+    }
+}

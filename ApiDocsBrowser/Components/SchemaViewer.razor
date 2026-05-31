@@ -1,0 +1,150 @@
+@using Microsoft.OpenApi.Models
+
+<MudStack Spacing="3">
+    @if (Schemas == null || !Schemas.Any())
+    {
+        <MudAlert Severity="Severity.Info">暂无 Schema 数据</MudAlert>
+    }
+    else
+    {
+        @foreach (var schema in Schemas)
+        {
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.DataObject" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6"><b>@schema.Key</b></MudText>
+                        <span class="chip chip-info">@GetSchemaType(schema.Value)</span>
+                    </MudStack>
+
+                    @if (!string.IsNullOrEmpty(schema.Value.Description))
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@schema.Value.Description</MudText>
+                    }
+
+                    @if (schema.Value.Properties != null && schema.Value.Properties.Any())
+                    {
+                        <div class="mt-2">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2"><b>属性</b></MudText>
+                            <table class="schema-table">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>类型</th>
+                                        <th>必填</th>
+                                        <th>描述</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var prop in schema.Value.Properties)
+                                    {
+                                        <tr>
+                                            <td><code>@prop.Key</code></td>
+                                            <td>
+                                                <span class="chip chip-type">@GetSchemaType(prop.Value)</span>
+                                            </td>
+                                            <td>
+                                                @if (schema.Value.Required?.Contains(prop.Key) == true)
+                                                {
+                                                    <span class="chip chip-error">必填</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="chip chip-default">可选</span>
+                                                }
+                                            </td>
+                                            <td>@prop.Value.Description</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (schema.Value.Enum != null && schema.Value.Enum.Any())
+                    {
+                        <div class="mt-2">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2"><b>枚举值</b></MudText>
+                            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                                @foreach (var enumVal in schema.Value.Enum)
+                                {
+                                    <span class="chip chip-info">@enumVal</span>
+                                }
+                            </MudStack>
+                        </div>
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+    }
+</MudStack>
+
+<style>
+    .schema-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+    }
+    .schema-table th,
+    .schema-table td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+    .schema-table th {
+        font-weight: 600;
+        background-color: var(--mud-palette-surface);
+    }
+    .chip {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .chip-info {
+        background-color: rgba(14, 165, 233, 0.1);
+        color: #0ea5e9;
+    }
+    .chip-type {
+        background-color: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+    }
+    .chip-error {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    .chip-default {
+        background-color: var(--mud-palette-surface);
+        color: var(--mud-palette-text-secondary);
+    }
+    code {
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        background-color: var(--mud-palette-surface);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public IDictionary<string, OpenApiSchema>? Schemas { get; set; }
+
+    private static string GetSchemaType(OpenApiSchema? schema)
+    {
+        if (schema == null) return "object";
+
+        if (schema.Reference != null)
+        {
+            return schema.Reference.Id;
+        }
+
+        if (schema.Type == "array" && schema.Items != null)
+        {
+            return $"Array[{GetSchemaType(schema.Items)}]";
+        }
+
+        return schema.Type ?? "object";
+    }
+}

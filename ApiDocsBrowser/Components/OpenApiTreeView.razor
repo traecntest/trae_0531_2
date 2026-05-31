@@ -1,0 +1,89 @@
+@using Microsoft.OpenApi.Models
+@inject NavigationManager NavManager
+
+<MudPaper Elevation="0">
+    @if (TagGroups == null || !TagGroups.Any())
+    {
+        <MudAlert Severity="Severity.Info">暂无 API 数据</MudAlert>
+    }
+    else
+    {
+        @foreach (var tagGroup in TagGroups)
+        {
+            <MudExpansionPanel>
+                <TitleContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
+                        <MudText Typo="Typo.subtitle2"><b>@tagGroup.Tag.Name</b></MudText>
+                        <span class="chip chip-default">@tagGroup.Operations.Count</span>
+                    </MudStack>
+                </TitleContent>
+                <ChildContent>
+                    @foreach (var (path, method, operation) in tagGroup.Operations)
+                    {
+                        <div @onclick="() => NavigateToOperation(path, method, operation)" class="list-item">
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <span class="chip chip-@method.ToString().ToLower()">@method.ToString().ToUpper()</span>
+                                <MudText Typo="Typo.body2">@path</MudText>
+                            </MudStack>
+                        </div>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+        }
+    }
+</MudPaper>
+
+<style>
+    .list-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .list-item:hover {
+        background-color: var(--mud-palette-surface);
+    }
+    .chip {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        min-width: 50px;
+        text-align: center;
+    }
+    .chip-default {
+        background-color: var(--mud-palette-default);
+        color: white;
+    }
+    .chip-get {
+        background-color: #10b981;
+        color: white;
+    }
+    .chip-post {
+        background-color: #3b82f6;
+        color: white;
+    }
+    .chip-put {
+        background-color: #f59e0b;
+        color: white;
+    }
+    .chip-delete {
+        background-color: #ef4444;
+        color: white;
+    }
+    .chip-patch {
+        background-color: #8b5cf6;
+        color: white;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public List<(OpenApiTag Tag, List<(string Path, OperationType Method, OpenApiOperation Operation)> Operations)>? TagGroups { get; set; }
+
+    private void NavigateToOperation(string path, OperationType method, OpenApiOperation operation)
+    {
+        NavManager.NavigateTo($"/explorer?path={Uri.EscapeDataString(path)}&method={method}");
+    }
+}

@@ -1,0 +1,55 @@
+@page "/tryit"
+@inject NavigationManager NavManager
+@inject HttpClient HttpClient
+
+<MudStack Spacing="4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h4">Try It - API 测试客户端</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                直接在浏览器中测试 API 接口，支持自定义请求头和请求体
+            </MudText>
+        </MudStack>
+    </MudPaper>
+
+    <TryItClient InitialUrl="_initialUrl" InitialMethod="_initialMethod" />
+
+    <MudPaper Elevation="1" Class="pa-5">
+        <MudText Typo="Typo.h6" Class="mb-3">使用说明</MudText>
+        <MudStack Spacing="1">
+            <MudItem>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-2" />
+                支持 GET、POST、PUT、DELETE、PATCH 请求方法
+            </MudItem>
+            <MudItem>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-2" />
+                自定义请求头，支持添加和删除
+            </MudItem>
+            <MudItem>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-2" />
+                JSON 请求体编辑
+            </MudItem>
+            <MudItem>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-2" />
+                实时显示响应状态、响应头和响应体
+            </MudItem>
+            <MudItem>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-2" />
+                自动生成 cURL 和 JavaScript 代码片段
+            </MudItem>
+        </MudStack>
+    </MudPaper>
+</MudStack>
+
+@code {
+    private string? _initialUrl;
+    private string? _initialMethod;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(NavManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _initialUrl = query["url"];
+        _initialMethod = query["method"];
+    }
+}

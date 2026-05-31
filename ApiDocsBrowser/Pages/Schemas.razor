@@ -1,0 +1,56 @@
+@page "/schemas"
+@using Microsoft.OpenApi.Models
+
+<MudStack Spacing="4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h4">数据模型</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                浏览 API 定义的所有数据模型和 Schema 结构
+            </MudText>
+        </MudStack>
+    </MudPaper>
+
+    @if (AppState.CurrentDocument == null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            尚未加载 API 文档，请先 <MudLink Href="/">返回首页</MudLink> 加载文档。
+        </MudAlert>
+    }
+    else if (AppState.CurrentDocument.Components?.Schemas == null || !AppState.CurrentDocument.Components.Schemas.Any())
+    {
+        <MudAlert Severity="Severity.Info">
+            当前 API 文档没有定义数据模型。
+        </MudAlert>
+    }
+    else
+    {
+        <SchemaViewer Schemas="AppState.CurrentDocument.Components.Schemas" />
+        
+        <MudPaper Elevation="1" Class="pa-5">
+            <MudText Typo="Typo.h6" Class="mb-3">统计信息</MudText>
+            <MudGrid Spacing="3">
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="0" Class="pa-4 text-center">
+                        <MudText Typo="Typo.h3" Color="Color.Primary">@AppState.CurrentDocument.Components.Schemas.Count</MudText>
+                        <MudText Typo="Typo.caption">数据模型</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="0" Class="pa-4 text-center">
+                        <MudText Typo="Typo.h3" Color="Color.Secondary">@GetTotalProperties()</MudText>
+                        <MudText Typo="Typo.caption">总属性数</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+</MudStack>
+
+@code {
+    private int GetTotalProperties()
+    {
+        return AppState.CurrentDocument?.Components?.Schemas?
+            .Sum(s => s.Value.Properties?.Count ?? 0) ?? 0;
+    }
+}
