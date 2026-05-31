@@ -120,7 +120,7 @@
 
     @if (_errorMessage != null)
     {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Closable="true" Closed="@(() => _errorMessage = null)">
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" OnClose="@(() => _errorMessage = null)">
             @_errorMessage
         </MudAlert>
     }

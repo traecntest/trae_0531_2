@@ -11,15 +11,18 @@
         <MudIconButton Icon="@Icons.Material.Filled.Menu" OnClick="@(() => DrawerToggle?.Invoke())" Edge="Edge.Start" />
         <MudText Typo="Typo.h6" Class="ml-2">API 文档浏览器</MudText>
         <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.DarkMode" 
-                       OnClick="@(() => ThemeService.ToggleDarkMode(!ThemeService.IsDarkMode))"
-                       Title="切换主题" />
-        <MudIconButton Icon="@Icons.Material.Filled.Palette" 
-                       OnClick="@OpenThemeSettings"
-                       Title="主题设置" />
-        <MudIconButton Icon="@Icons.Material.Filled.Help" 
-                       OnClick="@OpenAbout"
-                       Title="关于" />
+        <MudTooltip Text="切换主题">
+            <MudIconButton Icon="@Icons.Material.Filled.DarkMode" 
+                           OnClick="@(() => ThemeService.ToggleDarkMode(!ThemeService.IsDarkMode))" />
+        </MudTooltip>
+        <MudTooltip Text="主题设置">
+            <MudIconButton Icon="@Icons.Material.Filled.Palette" 
+                           OnClick="@OpenThemeSettings" />
+        </MudTooltip>
+        <MudTooltip Text="关于">
+            <MudIconButton Icon="@Icons.Material.Filled.Help" 
+                           OnClick="@OpenAbout" />
+        </MudTooltip>
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Elevation="2">
